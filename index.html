@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entrenador de Vocabulario</title>
+    <!-- 1. Cargar Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 2. Configurar la fuente Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* Aplicar la fuente Inter como fuente principal */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Estilo para el feedback (mensaje de correcto/incorrecto) */
+        #feedback.correct {
+            color: #16a34a; /* text-green-600 */
+        }
+        #feedback.incorrect {
+            color: #dc2626; /* text-red-600 */
+        }
+        /* Ocultar flechas en input de tipo number (aunque no usamos number, es útil) */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <!-- Contenedor principal de la aplicación (tarjeta + botón de agregar) -->
+    <main class="w-full max-w-lg">
+        
+        <!-- Contenedor principal de la tarjeta de estudio -->
+        <div class="bg-white w-full rounded-2xl shadow-2xl overflow-hidden transition-all duration-500 ease-in-out">
+            
+            <!-- 1. Imagen (Imaginación / Visual) -->
+            <img id="word-image" src="https://placehold.co/600x300/EBF4FF/708090?text=Cargando..." alt="Representación visual de la palabra" class="w-full h-56 object-cover">
+
+            <div class="p-6 md:p-8">
+                
+                <!-- 2. Palabra, Pronunciación y Sonido -->
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <!-- La Palabra -->
+                        <h1 id="word-display" class="text-4xl md:text-5xl font-bold text-gray-900">Palabra</h1>
+                        <!-- Pronunciación Fonética -->
+                        <p id="word-pronunciation" class="text-xl text-gray-500 italic">/prəˌnʌnsiˈeɪʃən/</p>
+                    </div>
+                    <!-- Botón de Sonido -->
+                    <button id="audio-btn" title="Escuchar pronunciación" class="p-3 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 hover:scale-110 transition-all duration-200 active:scale-95">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- 3. Significado -->
+                <div class="mb-6">
+                    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Significado</h2>
+                    <p id="word-meaning" class="text-lg text-gray-700">El significado de la palabra aparecerá aquí.</p>
+                </div>
+
+                <!-- 4. Narración (Frase de Ejemplo) -->
+                <div class="mb-8">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Narración (Ejemplo)</h2>
+                        <!-- Botón para escuchar la narración/ejemplo -->
+                        <button id="example-audio-btn" title="Escuchar narración" class="p-2 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 hover:scale-110 transition-all duration-200 active:scale-95">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <blockquote id="word-example" class="border-l-4 border-blue-200 pl-4 italic text-gray-600 text-lg">
+                        Una frase de ejemplo usando la palabra.
+                    </blockquote>
+                </div>
+
+                <!-- 5. Escritura (Práctica de Spelling) -->
+                <div class="bg-gray-50 p-5 rounded-lg">
+                    <label for="spelling-input" class="block text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Practicar Escritura</label>
+                    <input type="text" id="spelling-input" placeholder="Escribe la palabra en inglés..." class="w-full p-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button id="check-btn" class="w-full mt-3 bg-blue-600 text-white p-3 rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">Comprobar</S>
+                    <!-- Mensaje de feedback -->
+                    <p id="feedback" class="text-center h-6 mt-2 text-lg font-medium"></p>
+                </div>
+
+                <!-- 6. Botones de Navegación -->
+                <div class="flex justify-between mt-8">
+                    <button id="prev-btn" class="py-2 px-5 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors">Anterior</button>
+                    <button id="next-btn" class="py-2 px-5 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors">Siguiente</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botón para ABRIR el modal de agregar palabra -->
+        <div class="mt-6 text-center">
+            <button id="open-modal-btn" class="w-full py-3 px-5 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors shadow-lg active:scale-95">
+                + Agregar Nueva Palabra
+            </button>
+        </div>
+
+    </main>
+
+    <!-- El Modal para Agregar Palabra (oculto por defecto) -->
+    <div id="add-word-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white w-full max-w-md p-6 rounded-2xl shadow-xl transform transition-all scale-95 opacity-0" id="modal-content">
+            <h2 class="text-2xl font-bold mb-5 text-gray-900">Agregar Nueva Palabra</h2>
+            
+            <form id="add-word-form">
+                <div class="space-y-4">
+                    <div>
+                        <label for="new-word" class="block text-sm font-medium text-gray-700">Palabra (en inglés)</label>
+                        <input type="text" id="new-word" required class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label for="new-pronunciation" class="block text-sm font-medium text-gray-700">Pronunciación (ej. /ˈæpəl/)</label>
+                        <input type="text" id="new-pronunciation" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label for="new-meaning" class="block text-sm font-medium text-gray-700">Significado (en español)</label>
+                        <input type="text" id="new-meaning" required class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label for="new-image-url" class="block text-sm font-medium text-gray-700">URL de la Imagen</label>
+                        <input type="url" id="new-image-url" required class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="https://images.unsplash.com/...">
+                    </div>
+                    
+                    <div>
+                        <label for="new-example" class="block text-sm font-medium text-gray-700">Narración (frase de ejemplo)</label>
+                        <input type="text" id="new-example" required class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                
+                <!-- Botones del Modal -->
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" id="cancel-btn" class="py-2 px-4 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium">Cancelar</button>
+                    <button type="submit" class="py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">Guardar Palabra</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <script>
+        // --- Base de Datos de Palabras ---
+        // Lista de palabras por defecto para la primera vez que se usa
+        const defaultWords = [
+            {
+                word: "Apple",
+                pronunciation: "/ˈæpəl/",
+                meaning: "Una fruta redonda con piel roja o verde y pulpa blanca y crujiente.",
+                imageUrl: "https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?ixlib=rb-4.0.3&q=80&w=600&auto=format&fit=crop&crop=edges",
+                example: "She eats an apple every day for breakfast."
+            },
+            {
+                word: "Book",
+                pronunciation: "/bʊk/",
+                meaning: "Un conjunto de hojas de papel impresas o en blanco, unidas por un lado dentro de una cubierta.",
+                imageUrl: "https://images.unsplash.com/photo-1541963463532-d68292c34b19?ixlib=rb-4.0.3&q=80&w=600&auto=format&fit=crop&crop=edges",
+                example: "I am reading a fascinating book about history."
+            },
+            {
+                word: "Hello",
+                pronunciation: "/həˈloʊ/",
+                meaning: "Una expresión utilizada como saludo al encontrarse con alguien.",
+                imageUrl: "https://images.unsplash.com/photo-1554774853-7f03caeb52b0?ixlib=rb-4.0.3&q=80&w=600&auto=format&fit=crop&crop=edges",
+                example: "He smiled and said, 'Hello, how are you?'"
+            },
+            {
+                word: "Water",
+                pronunciation: "/ˈwɔːtər/",
+                meaning: "Un líquido transparente, incoloro e inodoro que forma mares, lagos, ríos y lluvia.",
+                imageUrl: "https://images.unsplash.com/photo-1551024709-8f232a51c526?ixlib=rb-4.0.3&q=80&w=600&auto=format&fit=crop&crop=edges",
+                example: "It's important to drink plenty of water."
+            },
+            {
+                word: "Learn",
+                pronunciation: "/lɜːrn/",
+                meaning: "Adquirir conocimiento o habilidad en algo a través del estudio, la experiencia o la enseñanza.",
+                imageUrl: "https://images.unsplash.com/photo-1491841573258-4f0f183c5923?ixlib=rb-4.0.3&q=80&w=600&auto=format&fit=crop&crop=edges",
+                example: "We are learning English to travel the world."
+            }
+        ];
+
+        // Intentar cargar palabras desde localStorage. Si no hay, usar las de por defecto.
+        let words = JSON.parse(localStorage.getItem('myVocabularyAppWords')) || defaultWords;
+
+        // --- Estado de la Aplicación ---
+        let currentWordIndex = 0;
+
+        // --- Selectores del DOM ---
+        const wordDisplay = document.getElementById('word-display');
+        const wordPronunciation = document.getElementById('word-pronunciation');
+        const wordImage = document.getElementById('word-image');
+        const wordMeaning = document.getElementById('word-meaning');
+        const wordExample = document.getElementById('word-example');
+        const audioBtn = document.getElementById('audio-btn');
+        const spellingInput = document.getElementById('spelling-input');
+        const checkBtn = document.getElementById('check-btn');
+        const feedback = document.getElementById('feedback');
+        const nextBtn = document.getElementById('next-btn');
+        const prevBtn = document.getElementById('prev-btn');
+        const exampleAudioBtn = document.getElementById('example-audio-btn'); // Botón para audio de ejemplo
+
+        // Selectores del Modal
+        const openModalBtn = document.getElementById('open-modal-btn');
+        const addWordModal = document.getElementById('add-word-modal');
+        const modalContent = document.getElementById('modal-content');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const addWordForm = document.getElementById('add-word-form');
+
+
+        // --- Funciones ---
+
+        /**
+         * Muestra la palabra actual en la interfaz
+         */
+        function displayWord(index) {
+            const wordData = words[index];
+            wordDisplay.textContent = wordData.word;
+            wordPronunciation.textContent = wordData.pronunciation;
+            wordMeaning.textContent = wordData.meaning;
+            wordExample.textContent = wordData.example;
+            
+            // Actualizar imagen
+            wordImage.src = wordData.imageUrl;
+            wordImage.alt = `Imagen de ${wordData.word}`;
+            
+            // Limpiar campos de práctica
+            spellingInput.value = '';
+            // No limpiar el feedback si es un mensaje de "palabra agregada"
+            if (feedback.textContent !== '¡Palabra agregada con éxito!') {
+                 feedback.textContent = '';
+                 feedback.className = '';
+            } else {
+                // Limpiar el mensaje después de un momento
+                setTimeout(() => {
+                    feedback.textContent = '';
+                    feedback.className = '';
+                }, 2000);
+            }
+        }
+
+        /**
+         * Usa la API de Síntesis de Voz para decir un texto
+         */
+        function speak(text) {
+            // Cancelar cualquier voz anterior
+            window.speechSynthesis.cancel();
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US'; // Asegurarse de que use la voz en inglés
+            utterance.rate = 0.9; // Un poco más lento para claridad
+            window.speechSynthesis.speak(utterance);
+        }
+
+        /**
+         * Muestra la siguiente palabra
+         */
+        function nextWord() {
+            currentWordIndex = (currentWordIndex + 1) % words.length; // Da la vuelta al llegar al final
+            displayWord(currentWordIndex);
+        }
+
+        /**
+         * Muestra la palabra anterior
+         */
+        function prevWord() {
+            currentWordIndex = (currentWordIndex - 1 + words.length) % words.length; // Da la vuelta al llegar al inicio
+            displayWord(currentWordIndex);
+        }
+
+        /**
+         * Comprueba la ortografía (spelling)
+         */
+        function checkSpelling() {
+            const userInput = spellingInput.value.trim().toLowerCase();
+            const correctWord = words[currentWordIndex].word.toLowerCase();
+
+            if (userInput === correctWord) {
+                feedback.textContent = '¡Correcto! ¡Muy bien!';
+                feedback.className = 'correct'; // Aplica la clase para color verde
+                speak('Correct! Well done!'); // <-- AÑADIDO: Sonido de éxito
+                // Opcional: ir a la siguiente palabra automáticamente
+                // setTimeout(nextWord, 1500);
+            } else {
+                feedback.textContent = 'Inténtalo de nuevo.';
+                feedback.className = 'incorrect'; // Aplica la clase para color rojo
+                speak('Try again.'); // <-- AÑADIDO: Sonido de error
+            }
+        }
+        
+        /**
+         * Guarda el array de palabras actual en localStorage
+         */
+        function saveWordsToStorage() {
+            localStorage.setItem('myVocabularyAppWords', JSON.stringify(words));
+        }
+
+        /**
+         * Funciones del Modal
+         */
+        function openModal() {
+            addWordModal.classList.remove('hidden');
+            // Pequeña animación de entrada
+            setTimeout(() => {
+                modalContent.classList.remove('scale-95', 'opacity-0');
+                modalContent.classList.add('scale-100', 'opacity-100');
+            }, 50); // Ligero retraso para que la transición de CSS se aplique
+        }
+
+        function closeModal() {
+            modalContent.classList.remove('scale-100', 'opacity-100');
+            modalContent.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                addWordModal.classList.add('hidden');
+                addWordForm.reset(); // Limpiar el formulario al cerrar
+            }, 200); // Esperar que termine la transición
+        }
+
+        function handleFormSubmit(event) {
+            event.preventDefault(); // Evitar que la página se recargue
+
+            // 1. Obtener valores del formulario
+            const newWordData = {
+                word: document.getElementById('new-word').value.trim(),
+                pronunciation: document.getElementById('new-pronunciation').value.trim() || `/${document.getElementById('new-word').value.toLowerCase()}/`, // Fallback
+                meaning: document.getElementById('new-meaning').value.trim(),
+                imageUrl: document.getElementById('new-image-url').value.trim(),
+                example: document.getElementById('new-example').value.trim()
+            };
+
+            // 2. Añadir la nueva palabra al array
+            words.push(newWordData);
+
+            // 2.5. Guardar el array actualizado en localStorage
+            saveWordsToStorage();
+            
+            // 3. Ir a la palabra recién agregada
+            currentWordIndex = words.length - 1;
+            
+            // 4. Cerrar el modal
+            closeModal();
+            
+            // 5. Mostrar la nueva palabra y dar feedback
+            displayWord(currentWordIndex);
+            feedback.textContent = '¡Palabra agregada con éxito!';
+            feedback.className = 'correct';
+            speak('Word added successfully!');
+        }
+
+
+        // --- Event Listeners ---
+
+        // Cargar la primera palabra al iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            // Si usamos las palabras por defecto por primera vez, las guardamos
+            if (!localStorage.getItem('myVocabularyAppWords')) {
+                saveWordsToStorage();
+            }
+            displayWord(currentWordIndex);
+        });
+
+        // Botones de navegación
+        nextBtn.addEventListener('click', nextWord);
+        prevBtn.addEventListener('click', prevWord);
+
+        // Botón de audio
+        audioBtn.addEventListener('click', () => {
+            speak(words[currentWordIndex].word);
+        });
+
+        // Botón de audio para el ejemplo
+        exampleAudioBtn.addEventListener('click', () => {
+            speak(words[currentWordIndex].example);
+        });
+
+        // Botón de comprobación
+        checkBtn.addEventListener('click', checkSpelling);
+
+        // Permitir presionar "Enter" en el input para comprobar
+        spellingInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                checkSpelling();
+            }
+        });
+
+        // Manejador de error para las imágenes (si una URL falla)
+        wordImage.onerror = function() {
+            this.src = `https://placehold.co/600x300/FEE2E2/DC2626?text=Error+al+cargar+imagen`;
+            this.alt = 'Error al cargar la imagen';
+        };
+        
+        // --- Event Listeners del Modal ---
+        openModalBtn.addEventListener('click', openModal);
+        cancelBtn.addEventListener('click', closeModal);
+        addWordForm.addEventListener('submit', handleFormSubmit);
+        
+        // Cerrar modal si se hace clic en el fondo oscuro
+        addWordModal.addEventListener('click', (event) => {
+            if (event.target === addWordModal) {
+                closeModal();
+            }
+        });
+
+    </script>
+</body>
+</html>
