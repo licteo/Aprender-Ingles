@@ -50,9 +50,8 @@
     <!-- Contenedor principal de la aplicación (tarjeta + botón de agregar) -->
     <main class="w-full max-w-lg">
         
-        <!-- ID del Usuario / Mensaje de Estado -->
-        <!-- NOTA: Se ha movido la lógica de error a esta sección para evitar el texto flotante -->
-        <div id="user-id-display" class="text-xs text-center mb-2">
+        <!-- ID del Usuario -->
+        <div id="user-id-display" class="text-xs text-gray-500 mb-2 text-center">
             <span class="font-bold text-gray-600">ID de Usuario:</span> Cargando...
         </div>
         
@@ -134,13 +133,9 @@
 
         <!-- Botón para ABRIR el modal de agregar palabra -->
         <div class="mt-6 text-center">
-            <button id="open-modal-btn" class="w-full py-3 px-5 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors shadow-lg active:scale-95 disabled:bg-gray-400 disabled:text-gray-200" title="Agregar Nueva Palabra">
+            <button id="open-modal-btn" class="w-full py-3 px-5 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors shadow-lg active:scale-95">
                 + Agregar Nueva Palabra
             </button>
-            <!-- Nuevo span para el mensaje de advertencia bajo el botón -->
-            <span id="db-warning" class="mt-2 block text-sm font-medium text-red-600 hidden">
-                (Funcionalidad CRUD deshabilitada)
-            </span>
         </div>
 
     </main>
@@ -290,12 +285,11 @@
         const prevBtn = document.getElementById('prev-btn');
         const exampleAudioBtn = document.getElementById('example-audio-btn');
         const userIdDisplay = document.getElementById('user-id-display');
-        const dbWarning = document.getElementById('db-warning'); // Nuevo selector
         
         // Botones de CRUD
         const editWordBtn = document.getElementById('edit-word-btn');
         const deleteWordBtn = document.getElementById('delete-word-btn');
-        const openModalBtn = document.getElementById('open-modal-btn'); 
+        const openModalBtn = document.getElementById('open-modal-btn'); // Necesario para deshabilitar
 
         // Selectores del Modal Add/Edit
         const addWordModal = document.getElementById('add-word-modal');
@@ -325,15 +319,10 @@
         async function initializeFirebase() {
             if (!isFirebaseConfigValid) {
                 console.warn("ADVERTENCIA: Configuración de Firebase inválida. Se cargan datos por defecto sin funcionalidad de guardado.");
-                
-                // Mostrar la advertencia de que CRUD está deshabilitado
                 userIdDisplay.innerHTML = `<span class="font-bold text-red-600">ERROR:</span> Base de datos no inicializada.`;
-                dbWarning.classList.remove('hidden');
-
                 words = defaultWords.map(w => ({...w})); // Copia para asegurar mutabilidad en la simulación
                 isFirestoreEnabled = false; // Deshabilitar CRUD
                 displayWord(currentWordIndex);
-                
                 // Deshabilitar botones de CRUD si Firestore no está habilitado
                 editWordBtn.disabled = true;
                 deleteWordBtn.disabled = true;
@@ -342,8 +331,6 @@
             }
 
             isFirestoreEnabled = true;
-            dbWarning.classList.add('hidden'); // Ocultar la advertencia si la DB está habilitada
-            
             try {
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
@@ -372,16 +359,7 @@
             } catch (error) {
                 // Este catch ahora captura el error si la configuración es válida PERO falla la inicialización (ej. reglas de seguridad)
                 console.error("Error al inicializar Firebase o al autenticar:", error);
-                userIdDisplay.innerHTML = `<span class="font-bold text-red-600">ERROR:</span> Error crítico de autenticación.`;
-                isFirestoreEnabled = false;
-                dbWarning.classList.remove('hidden');
-                
-                // Volver al modo demo si la inicialización falla
-                words = defaultWords.map(w => ({...w})); 
-                displayWord(currentWordIndex);
-                editWordBtn.disabled = true;
-                deleteWordBtn.disabled = true;
-                openModalBtn.disabled = true;
+                userIdDisplay.textContent = "Error crítico de autenticación.";
                 return false;
             }
         }
@@ -420,11 +398,12 @@
             const collectionPath = getUserCollectionPath();
             if (!collectionPath) return;
 
-            // Ordenar por el timestamp para mantener el orden
+            // Nota: Se elimina orderBy para evitar errores de índice en Firestore si no se ha configurado
+            // Pero como el código original lo tenía, lo mantendremos para el despliegue estándar.
+            // Si hay problemas, se recomienda quitar el orderBy.
             const q = query(collection(db, collectionPath), orderBy("timestamp", "asc"));
 
             onSnapshot(q, async (snapshot) => {
-                // Si ya teníamos palabras y ahora no hay, o si es la carga inicial y está vacío.
                 const needsSeeding = words.length === 0 && snapshot.empty;
 
                 // Mapear los documentos a nuestro array de palabras
@@ -435,7 +414,6 @@
                 
                 // Si es la primera carga y está vacío, inicializa con datos por defecto
                 if (needsSeeding) {
-                    // No es necesario llamar a displayWord aquí, el onSnapshot se activará de nuevo después del seeding.
                     await seedDatabaseIfEmpty(snapshot);
                     return; 
                 }
@@ -450,10 +428,7 @@
                 displayWord(currentWordIndex);
             }, (error) => {
                 console.error("Error al escuchar los datos de Firestore:", error);
-                // Si hay un error, volvemos a mostrar el modo de error
-                isFirestoreEnabled = false;
-                words = defaultWords.map(w => ({...w}));
-                displayWord(0); // Mostrar la primera palabra de demo
+                wordDisplay.textContent = "Error de conexión. Recarga la página.";
             });
         }
         
@@ -531,64 +506,31 @@
          * Muestra la palabra actual en la interfaz
          */
         function displayWord(index) {
-            // Verificar si estamos en modo de demostración (sin Firestore habilitado)
-            if (!isFirestoreEnabled) {
-                // Modo DEMO / Error de DB
-                wordDisplay.textContent = "¡Bienvenido!";
-                wordPronunciation.textContent = "(Modo de Demostración)";
-                wordMeaning.textContent = "Estás viendo datos locales. La funcionalidad de guardado (CRUD) está deshabilitada.";
-                wordExample.textContent = "Revisa la consola para detalles del error de conexión.";
-                wordImage.src = "https://placehold.co/600x300/FEE2E2/DC2626?text=DB+DESHABILITADA";
-                wordImage.alt = "Pantalla de bienvenida o error";
-                
-                // Deshabilitar CRUD
-                editWordBtn.disabled = true;
-                deleteWordBtn.disabled = true;
-                openModalBtn.disabled = true;
-                dbWarning.classList.remove('hidden');
-                
-                // Si aún así hay palabras de la lista de demostración, las mostramos
-                if (words.length > 0) {
-                    const wordData = words[index];
-                    wordDisplay.textContent = wordData.word;
-                    wordPronunciation.textContent = wordData.pronunciation;
-                    wordMeaning.textContent = wordData.meaning;
-                    wordExample.textContent = wordData.example;
-                    wordImage.src = wordData.imageUrl;
-                    wordImage.alt = `Imagen de ${wordData.word}`;
-                    
-                    // Asegurar que el ID de usuario muestre el estado de error
-                    userIdDisplay.innerHTML = `<span class="font-bold text-red-600">ERROR:</span> Base de datos no inicializada.`;
-                }
-
-                // Deshabilitar navegación (siempre que la lista de words sea la de demo)
-                nextBtn.disabled = true;
-                prevBtn.disabled = true;
-                return;
-            }
-            
-            // Modo Firestore Habilitado
-            dbWarning.classList.add('hidden');
-
+            // Si la aplicación falló al inicializar Firestore, usa las palabras por defecto
             if (words.length === 0) {
-                // Estado inicial cuando Firestore está vacío pero funciona
-                wordDisplay.textContent = "¡Bienvenido!";
-                wordPronunciation.textContent = "Añade tu primera palabra";
+                wordDisplay.textContent = isFirestoreEnabled ? "¡Bienvenido!" : "Error DB, usando modo demo.";
+                wordPronunciation.textContent = isFirestoreEnabled ? "Añade tu primera palabra" : "Sin conexión a la base de datos.";
                 wordMeaning.textContent = "Haz clic en 'Agregar Nueva Palabra' para empezar a estudiar.";
-                wordExample.textContent = "La aplicación utiliza Firestore para guardar tus datos.";
-                wordImage.src = "https://placehold.co/600x300/6366F1/FFFFFF?text=VOCABULARIO+APP";
+                wordExample.textContent = isFirestoreEnabled ? "La aplicación utiliza Firestore para guardar tus datos." : "La funcionalidad CRUD está deshabilitada.";
+                wordImage.src = isFirestoreEnabled ? "https://placehold.co/600x300/6366F1/FFFFFF?text=VOCABULARIO+APP" : "https://placehold.co/600x300/DC2626/FFFFFF?text=ERROR+CR%C3%8DTICO+DE+DB";
                 wordImage.alt = "Pantalla de bienvenida";
                 
-                editWordBtn.disabled = true;
-                deleteWordBtn.disabled = true;
-                openModalBtn.disabled = false;
+                // Deshabilitar navegación si no hay palabras
                 nextBtn.disabled = true;
                 prevBtn.disabled = true;
+                
+                // Deshabilitar CRUD si no hay palabras O si Firestore falló
+                editWordBtn.disabled = true;
+                deleteWordBtn.disabled = true;
+                openModalBtn.disabled = !isFirestoreEnabled;
+                
+                // Mostrar advertencia si la DB está deshabilitada
+                if (!isFirestoreEnabled) {
+                     userIdDisplay.innerHTML = `<span class="font-bold text-red-600">ERROR:</span> Base de datos no inicializada.`;
+                }
                 return;
             }
 
-
-            // Modo Firestore Habilitado CON Palabras
             const wordData = words[index];
             wordDisplay.textContent = wordData.word;
             wordPronunciation.textContent = wordData.pronunciation;
@@ -599,10 +541,10 @@
             nextBtn.disabled = words.length <= 1;
             prevBtn.disabled = words.length <= 1;
             
-            // Habilitar CRUD
-            editWordBtn.disabled = false;
-            deleteWordBtn.disabled = false;
-            openModalBtn.disabled = false;
+            // Habilitar CRUD si hay palabras Y Firestore está habilitado
+            editWordBtn.disabled = !isFirestoreEnabled;
+            deleteWordBtn.disabled = !isFirestoreEnabled;
+            openModalBtn.disabled = !isFirestoreEnabled;
 
             // Actualizar imagen
             const imageUrl = wordData.imageUrl || `https://placehold.co/600x300/F59E0B/FFFFFF?text=${wordData.word}`; // Fallback con la palabra
@@ -730,6 +672,7 @@
             event.preventDefault(); 
             if (!isFirestoreEnabled) {
                 closeModal();
+                // Opcional: mostrar un mensaje de error aquí si CRUD está deshabilitado.
                 return;
             }
             
